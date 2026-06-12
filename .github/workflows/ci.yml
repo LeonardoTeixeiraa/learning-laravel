@@ -1,4 +1,4 @@
-name: CI/CD Pipeline Laravel Docker
+name: Push-to-EC2
 
 on:
   push:
@@ -6,44 +6,20 @@ on:
       - main
 
 jobs:
-  build-and-push:
-    name: Build Image and Push to Docker Hub
+  deploy:
+    name: Deploy to EC2
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Checkout the files
+        uses: actions/checkout@v6
 
-      - name: Docker Login
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.SEC_USER_DOCKER }}
-          password: ${{ secrets.SEC_PASSWD_DOCKER }}
-
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.SEC_USER_DOCKER }}/laravel-app:latest
-
-  deploy-to-ec2:
-    name: Deploy to AWS EC2
-    runs-on: ubuntu-latest
-    needs: build-and-push
-
-    steps:
-      - name: Execute Remote SSH Commands to Deploy
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
-          script: |
-            sudo docker login -u ${{ secrets.SEC_USER_DOCKER }} -p ${{ secrets.SEC_PASSWD_DOCKER }}
-            sudo docker pull ${{ secrets.SEC_USER_DOCKER }}/laravel-app:latest
-            sudo docker stop laravel-container || true
-            sudo docker rm laravel-container || true
-            sudo docker run -d --name laravel-container -p 80:80 -v /home/ubuntu/laravel/.env:/var/www/html/.env ${{ secrets.SEC_USER_DOCKER }}/laravel-app:latest
+      - name: Copy files with SSH
+        uses: easingthemes/ssh-deploy@main
+        env:
+          SSH_PRIVATE_KEY: ${{secrets.EC2_SSH_KEY}}
+          ARGS: "-rltoGoDzvO"
+          SOURCE: "./"
+          REMOTE_HOST: "ec2-54-159-28-140.compute-1.amazonaws.com"
+          REMOTE_USER: "ubuntu"
+          TARGET: "/var/www/html/hdcevents/"
+          EXCLUDE: "/vendor/, /node_modules/, .env, /storage/logs/, /storage/framework/"
