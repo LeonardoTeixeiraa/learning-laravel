@@ -51,6 +51,5 @@ jobs:
             sudo docker stop laravel-container || true
             sudo docker rm laravel-container || true
             
-            # 4. Rodar o novo container mapeando a porta 80 do EC2 para a 80 do container
-            # Nota: Certifique-se de colocar o seu arquivo .env mapeado ou configurado no EC2 se necessário.
-            sudo docker run -d \ --name laravel-container \ -p 80:80 \ -v /home/ubuntu/laravel/.env:/var/www/html/.env \ ${{ secrets.SEC_USER_DOCKER }}/laravel-app:latest
+            # 4. Rodar o novo container (Comando em uma linha única e limpa para evitar erros)
+            sudo docker run -d --name laravel-container -p 80:80 -v /home/ubuntu/laravel/.env:/var/www/html/.env ${{ secrets.SEC_USER_DOCKER }}/laravel-app:latest
