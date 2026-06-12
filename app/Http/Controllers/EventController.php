@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\Event;
 use App\Models\User;
 
@@ -101,5 +102,23 @@ class EventController extends Controller
         Event::findOrFail($request->id)->update($data);
 
         return redirect('/dashboard')->with('msg', 'Evento atualizado com sucesso!');
+    }
+
+    public function joinEvent($id)
+    {
+        $user = auth()->user();
+
+        $user->eventsAsParticipant()->attach($id);
+
+
+        // // attach participant to event via pivot table, avoid duplicates
+        // DB::table('event_user')->insertOrIgnore([
+        //     'user_id' => $user->id,
+        //     'event_id' => $id,
+        // ]);
+
+        $event = Event::findOrFail($id);
+
+        return redirect()->back()->with('msg', 'Sua presença confirmada com sucesso!' . $event->title);
     }
 }
