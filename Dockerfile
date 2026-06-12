@@ -19,7 +19,7 @@ RUN a2enmod rewrite
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 #Instalar o Node.js e NPM (necessário para compilar o Jetstream)
-RUN curl -sL https://deb.nodesource.com/setup_18.x | bash - \
+RUN curl -sL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y openssl nodejs
 
 WORKDIR /var/www/html
