@@ -1,0 +1,56 @@
+name: CI/CD Pipeline Laravel Docker
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    name: Build Image and Push to Docker Hub
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.SEC_USER_DOCKER }}
+          password: ${{ secrets.SEC_PASSWD_DOCKER }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.SEC_USER_DOCKER }}/laravel-app:latest
+
+  deploy-to-ec2:
+    name: Deploy to AWS EC2
+    runs-on: ubuntu-latest
+    needs: build-and-push # Só roda o deploy se o build no Docker Hub der certo
+
+    steps:
+      - name: Execute Remote SSH Commands to Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # 1. Fazer o login no Docker Hub dentro do EC2
+            sudo docker login -u ${{ secrets.SEC_USER_DOCKER }} -p ${{ secrets.SEC_PASSWD_DOCKER }}
+            
+            # 2. Baixar a versão mais recente da imagem que acabou de ser gerada
+            sudo docker pull ${{ secrets.SEC_USER_DOCKER }}/laravel-app:latest
+            
+            # 3. Parar e remover o container antigo (se ele já existir) para não dar conflito de porta
+            sudo docker stop laravel-container || true
+            sudo docker rm laravel-container || true
+            
+            # 4. Rodar o novo container mapeando a porta 80 do EC2 para a 80 do container
+            # Nota: Certifique-se de colocar o seu arquivo .env mapeado ou configurado no EC2 se necessário.
+            sudo docker run -d \ --name laravel-container \ -p 80:80 \ -v /home/ubuntu/laravel/.env:/var/www/html/.env \ ${{ secrets.SEC_USER_DOCKER }}/laravel-app:latest
